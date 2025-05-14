@@ -1,0 +1,9 @@
+qna_planner_prompt:
+  id: qna_planner_prompt.dev.v0
+  metrics: [accuracy]
+ 
+qna_planner_prompt.dev.v0:
+  class: evals.elsuite.basic.match:Match
+ 
+  args:
+    samples_jsonl: qna_planner_prompt/samples.jsonl

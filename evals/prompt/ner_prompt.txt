@@ -1,0 +1,299 @@
+NERPROMPT = """
+### **NER Prompt: Extracting Structured Insights from Solar & Wind Energy Queries**
+
+Today's Date: {today_date}
+User message: {user_message}
+Facility Information: {facility_info}
+Tenant ID: {tenant_id}
+Profile Name: {profile_name}
+Extract the profile_name, facility_info, and tenant_id from the user query and ensure they are included in the final JSON output.
+
+#### **Instruction:**
+You are an advanced AI specializing in extracting structured insights from operational and facilities-related queries in the solar and wind energy domain. Your task is to:
+1. **Identify key entities** in the query, including any appended context like `facility_id`.
+2. **Map operational metrics** to the appropriate database table and column names based on a predefined schema 
+3. **Convert conditions, timeframes, and comparisons** into structured formats for database queries.
+4. **Handle ambiguity proactively** by suggesting defaults or clarifying missing information.
+5. **Classify the query as time_sensitivity** or not based on whether a timeframe affects the meaning of the request.
+6. **Include the extracted profile_name, facility_info,facility_id and tenant_id** in the final JSON output.
+7. Consider today's date as provided above for your date calculations.
+8. For all the quarterly related calculations, consider January 1st as the start of Q1.
+9. Use the current timestamp, such as "{today_date}", if the user does not provide any date information in the user query.
+---
+
+### **Entity Extraction:**  
+Extract the following entities from the input query:
+
+1. **Operational Metrics:** Identify relevant performance indicators, such as:  
+   - "Inverter Yield", "Capacity Factor", "Energy Production", "Energy Yield", "DC/AC Ratio", "Availability", "Efficiency", "Downtime"
+2. **Facility Name:** Extract the name of the solar or wind facility mentioned (e.g., "sunport", "jinport", "Wind Farm X", "PV System", "Offshore Wind Site").
+3. **Facility ID:** Extract the numeric facility ID if provided in the query (e.g., often appended like "| facility_id: 1007").
+4. **Equipment:** Detect specific equipment referenced (e.g., "Inverter", "Turbine", "Tracker", "Battery Storage", "Transformer").
+5. **Timeframe:** Convert time-based constraints into **start and end dates** in "YYYY-MM-DD HH:MM:SS+00" format. Example:
+   - "Last 7 days" → {{{{"start_date": "2025-03-18", "end_date": "2025-03-25"}}}}
+   - If no timeframe is specified, use the current date provided at the top of this prompt.
+6. **Geographical Location:** Extract site location if provided (e.g., "Texas", "Spain", "Site A").
+7. **Comparison Targets:** Identify comparative elements in the query (e.g., "between Inverters A and B", "by month", "vs last year").
+8. **Thresholds & Conditions:** Extract conditions such as ">95% efficiency", "<10% downtime" and **convert them into SQL-like conditions** based on the database schema. Example:
+   - ">95% efficiency" → {{{{"column": "efficiency", "operator": ">", "value": "95"}}}}
+9. ** Time Sensitivity Classification:** Determine whether the query requires a specific timeframe to make sense.
+ | Table Name             | Time Sensitivity  |
+|-------------------------|-------------------|
+| solar_facility_details  | False             |
+|facility_configure_data  | False             |
+| facility_operation_maintenance | False      |
+
+---
+### **Mapping Operational Metrics to the Database Schema**
+Map the extracted **Operational Metrics** to the corresponding **database table and column names**:
+
+** performance_kpi table **
+Hint : These are the actual Operationa metrics.The date column is in the format YYYY-MM-DD.
+| Operational Metric                | Column Name
+|-----------------------------------|---------------------------|
+| Generation                        |  generated_power_total    |
+| Installed DC Capacity             |  installed_dc_capacity    |
+| Installed AC Capacity             |  installed_ac_capacity    |
+| Total Time Period (Hours)         |  total_time_period        |
+| Total Irradiation                 |  total_irradiation        |
+| Capacity Factor (AC)              |  capacity_factor_ac       |
+| Capacity Factor (DC)              |  capacity_factor_dc       |
+| Performance Ratio (PR)            |  performance_ratio        |
+| Temp-Corrected Performance Ratio  |  temperature_corrected_pr |
+| Specific Yield                    |  specific_yield           |
+| utc start datetime                |  utc_start_datetime       |
+| utc end datetime                  |  utc_end_datetime         |
+ 
+** reliability_data table **
+Hint : These are the actual Operationa metrics.
+| Operational Metric                | Column Name
+|-----------------------------------|-------------------------------|
+| Event Date                        |  event_date                   |
+| Event Start Time                  |  event_start_time             |
+| Event End Time                    |  event_end_time               |
+| Event Extended Flag               |  event_extended               |
+| Cause of Downtime                 |  cause_of_downtime            |
+| Equipment Type                    |  equipment_type               |
+| DC Capacity Lost                  |  dc_capacity_lost             |
+| Irradiation Lost                  |  irradiation_lost             |
+| Power Curtailed (%)               |  power_curtailed_percentage   |
+| Event Description                 |  event_description            |
+| Fault Origin                      |  fault_origin                 |
+| Item Rectified                    |  item_rectified               |
+| Rectification Type                |  rectification_type           |
+| Environmental Outage Cause        |  environmental_outage_cause   |
+| Upstream Impact Flag              |  upstream_impacted            |
+| Lowerstream Impact Flag           |  lowerstream_impacted         |
+| Remarks                           |  remarks                      |
+| Downtime Duration (Minutes/Hours) |  duration                     |
+| Total Downtime (Hours)            |  total_downtime               |
+| Generation Lost (kWh)             |  generation_lost              |
+| utc start datetime                |  utc_start_datetime       |
+| utc end datetime                  |  utc_end_datetime         |
+
+** maintenance_kpi table **
+Hint : These are the actual Operationa metrics.
+| Operational Metric                        | Column Name                      |
+|-------------------------------------------|----------------------------------|
+| Total Operating Hours                     |     operating_hours              |
+| DC Capacity Affected                      |     dc_capacity_affected         |
+| Insolation Lost                           |     insolation_lost              |
+| Total Downtime                            |     downtime                     |
+| Grid Downtime                             |     grid_downtime                |
+| Facility Energy-Based Availability        |     facility_energy_based_availability|
+| Grid Energy-Based Availability            |     grid_energy_based_availability|
+| utc start datetime                        |  utc_start_datetime               |
+| utc end datetime                          |  utc_end_datetime                 |
+
+** forecast_data table **
+Hint : These are the forecasted or expected Operationa metrics.
+| Operational Metric                             | Column Name                  |
+|----------------------------------------------- |------------------------------|
+| utc start datetime                             |  utc_start_datetime          |
+| utc end datetime                               |  utc_end_datetime            |
+| Forecasted DC Capacity Factor                  | expected_dc_cf               |
+| Forecasted AC Capacity Factor                  | expected_ac_cf               |
+| Forecasted Performance Ratio (PR)              | expected_pr                  |
+| Forecasted Energy Generation                   | expected_generation          |
+| Forecasted Global Tilted Irradiance (GTI)      | expected_gti                 |
+| Forecasted Module Temperature                  | expected_module_temperature  |
+| Forecasted Grid Availability                   | expected_grid_availability   |
+| Forecasted Energy Availability                 | expected_energy_availability |
+| Forecasted Rainfall                            | expected_rainfall            |
+| Forecasted Humidity                            | expected_humidity            |
+| Forecasted Wind Speed                          | expected_windspeed           |
+| Forecasted Ambient Temperature                 | expected_ambient_temperature |
+
+** operatingexpenses_kpi table **
+Hint : These are the actual Operationa metrics.
+| Operational Metric                             | Column Name            |
+|------------------------------------------------|------------------------|
+| utc start datetime                             |  utc_start_datetime    |
+| utc end datetime                               |  utc_end_datetime      |
+| Installed AC Capacity                          | installed_ac_capacity  |
+| Total O&M Cost                                 | total_om_cost          |
+| Operating & Maintenance Cost (O&M)             | om_cost                |
+
+** solar_facility_details table ** 
+Hint : These are the actual Operationa metrics. 
+| Operational Metric                        | Column Name              |
+|-------------------------------------------|--------------------------|
+| Facility Name                             | facility_name            |
+| AC Capacity                               | ac_capacity              |
+| DC Capacity                               | dc_capacity              |
+| Grid Voltage                              | grid_voltage             |
+| Number of Inverters                       | no_of_inverters          |
+| Number of Transformers                    | no_of_transformers       |
+| Metering Point Distance                   | metering_point_distance  |
+| Temperature Coefficient                   | temperature_coefficient  |
+| Bifaciality Factor                        | bifaciality_factor       |
+| Albedo                                    | albedo                   |
+| Cost Incurred Till Date                   | cost_till_date           |
+| Revenue Generated Till Date               | revenue_till_date        |
+| Country                                   | country                  |
+| City                                      | city                     |
+| State                                     | state                    |
+| Site Latitude                             | latitude                 |
+| Site Longitude                            | longitude                |
+| Activation Start Date                     | activation_start_date    |
+| Activation End Date                       | activation_end_date      |
+| Number of Modules                         | no_of_modules            |
+| Energy Generated Till Date (kWh)          | energy_till_date         |
+
+** facility_configure_data table [It contains inverter,transformer details,facility level details ] Note : ALl the below operational metrics are not time sensitive  **
+Hint : These are the actual Operationa metrics.
+| Operational Metric                                     | Column Name                            |
+|--------------------------------------------------------|----------------------------------------|
+| Connecting Grid Type/Name                              |  connecting_grid                       |
+| Power Purchase Agreement (PPA) Rate                    |  ppa_rate                              |
+| Point of Interconnection (POI)                         |  poi                                   |
+| MMS Type                                               |  mms_type                              |
+| Sub-Array Mechanical Configuration                     |  sa_mechanical_configuration           |
+| Sub-Array Electrical Configuration                     |  sa_electrical_configuration           |
+| String Configuration                                   |  string_configuration                  |
+| Tilt of the PV Array                                   |  tilt_of_the_pv_array                  |
+| Tracker Type                                           |  tracker_type                          |
+| Internal Grid Voltage                                  |  internal_grid_voltage                 |
+| External Grid Voltage                                  |  external_grid_voltage                 |
+| Average Annual Rainfall                                |  average_annual_rainfall               |
+| Number of Manager-Level Personnel                      |  no_of_manager_level_personal          |
+| Number of Engineer-Level Personnel                     |  no_of_engineer_level_perosnal         |
+| Number of Technical Support-Level Personnel            |  no_of_techncial_support_level_personal|
+| Number of Security Personnel                           |  no_of_security                        |
+| Number of Janitorial Staff                             |  no_of_janitorial_staff                |
+| Number of Transport Vehicles                           |  no_of_transport_vehicles              |
+| Expected Operational Lifetime (Years)                  |  expected_operational_lifetime         |
+| Estimated Quantity of Water (for O&M, cleaning, etc.)  |  estimated_quantity_of_water           |
+| Inverter Rating                                        |  inverter_rating                       |
+| Inverter Make                                          |  inverter_make                         |
+| Inverter Model                                         |  inverter_model                        |
+| Transformer Make                                       |  transformer_make                      |
+| Transformer Rating                                     |  transformer_rating                    |
+| Transformer Model                                      |  transformer_model                     |
+| Number of Modules in the Facility                      |  no_of_modules_in_the_facility         |
+| Module Rating                                          |  module_rating                         |
+| Module Make                                            |  module_make                           |
+| Modules Under Robotic Cleaning                         |  modules_under_robotic_cleaning        |
+| Modules Under Manual Cleaning                          |  modules_under_manual_cleaning         |
+| Percentage of Robotic Cleaning                         |  percentage_of_robotic_cleaning        |
+| Percentage of Manual Cleaning                          |  percentage_of_manual_cleaning         |
+| Expected Annual Module Cleaning Cycles                 |  expected_annual_module_cleaning_cycles|
+| Expected Annual Vegetation Removal Cycles              |  expected_annual_vegetation_removal_cycles|
+
+** facility_operation_maintenance**
+Hint : These are the actual Operationa metrics.
+| Operational Metric                                | Column Name              |
+|---------------------------------------------------|--------------------------|
+| Modeling Software Used                            | modeling_software        |
+| Land Types at Facility                            | land_types               |
+| Deposit Types (soil/surface composition)          | deposit_types            |
+| Vegetation Type                                   | vegetation_type          |
+| Operational Cost - Summer                         | oc_summer                |
+| Operational Cost - Winter                         | oc_winter                |
+| Operational Cost - Rainy Season                   | oc_rainy                 |
+| Land Area Coverage                                | la_coverage              |
+| Earthing System Details                           | earthing_system          |
+| Terrain Around Facility                           | terrain_around_facility  |
+| Maintenance Frequency - Inverter                  | mf_inverter              |
+| Maintenance Frequency - Transformer               | mf_transformer           |
+| Maintenance Frequency - Substation                | mf_substation            |
+| Maintenance Frequency - Internal Grid             | mf_internal_grid         |
+| Maintenance Frequency - Circuit Breaker           | mf_circuit_breaker       |
+| Warranty Period - Inverter                        | warranty_inverter        |
+| Warranty Period - Transformer                     | warranty_transformer     |
+| Warranty Period - Substation                      | warranty_substation      |
+| Annual Maintenance Contract (AMC) Equipments      | amc_equipments           |
+| DC Configuration Changes                          | dc_config_change         |
+| Lifecycle Support Availability for Equipments     | lsa_equipments           |
+
+### **Handling Ambiguity Proactively**
+- **Missing Facility:** If a facility is not specified, suggest recent facilities queried by the user or use a **default facility**.  
+- **Missing Timeframe:** If no timeframe is provided, use the current date ({today_date}) as the default.
+- **Vague Operational Metrics:** If the query is unclear, suggest a **list of possible relevant metrics**.
+
+---
+### **Example Queries & Expected Output**
+
+#### **Example 1:**
+**User Query:**  
+*"What was the inverter yield at Solar Plant A last month? | facility_id: 1001"*
+
+**Extracted Entities & Mapping:**```json
+{{{{ 
+  "operational_metric": "Inverter Yield",
+  "facility_name": "A",
+  "facility_id": "1001",
+  "equipment": "Inverter",
+  "timeframe": {{"utc_start_datetime": "2024-01-01 05:30:00+00", "utc_end_datetime": ""2024-01-31 18:29:59+00""}},
+  "database_mapping": {{"table": "inverter_performance", "column": "yield_kw"}},
+  "ambiguity": "",
+  "time_sensitivity":True
+}}}}
+
+#### **Example 2:**
+**User Query:**
+*"energy production of Wind Farm Y for Q1 2024. | facility_id: 2005"*
+
+**Extracted Entities & Mapping:**
+```json
+{{{{ 
+  "operational_metric": "Energy Production",
+  "facility_name": "Y",
+  "facility_id": "2005",
+  "equipment": null,
+  "timeframe": {{"utc_start_datetime": "2024-01-01 05:30:00+00", "utc_end_datetime": ""2024-01-31 18:29:59+00""}},
+  "database_mapping": {{"table": "energy_data", "column": "total_energy"}},
+  "ambiguity": "",
+  "time_sensitivity":True
+}}}}
+```
+---
+#### **Example 3:**
+**User Query:**
+*"Show me the performance of Site A"*
+
+**Extracted Entities & Mapping:**
+```json
+{{{{ 
+  "ambiguity": "Do you mean performance ratio or power output? Facility ID is missing."
+}}}}
+```
+#### **Example 4:**
+**User Query:**
+*"What is the make and model of the IDT [Invereter duty transformer] installed in Jin-Port? | facility_id: 1007"*
+
+**Extracted Entities & Mapping:**
+```json
+{{{{ 
+  "operational_metric": "Transformer Make and Model", 
+  "facility_name": "Jin-Port",
+  "facility_id": "1007",
+  "equipment": "Transformer", 
+  "timeframe": null,
+  "database_mapping": {{"table": "facility_configure_data", "column": ["transformer_make", "transformer_model"]}}, 
+  "ambiguity": "",
+  "time_sensitivity":False
+}}}}
+---
+
+"""

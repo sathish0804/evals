@@ -19,3 +19,15 @@ openai-key.txt
 # Ignore run_experiments.sh results
 evals/elsuite/**/logs/
 evals/elsuite/**/outputs/
+
+.github/
+
+# Ignore all files in the .github/workflows directory
+.github/workflows/*
+
+# Ignore all files in the .github/actions directory
+.github/actions/*
+docs/*
+examples/*
+scripts/*
+tests/*

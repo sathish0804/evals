@@ -1,0 +1,4 @@
+ner_prompt:
+  class: evals.completion_fns.ner_prompt:NerPrompt
+  args:
+    model: gpt-4

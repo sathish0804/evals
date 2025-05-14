@@ -1,0 +1,8 @@
+supervisory_planner_prompt:
+  id: supervisory_planner_prompt.dev.v0
+  metrics: [accuracy]
+ 
+supervisory_planner_prompt.dev.v0:
+  class: evals.elsuite.basic.fuzzy_match:FuzzyMatch
+  args:
+    samples_jsonl: supervisory_agent/samples.jsonl

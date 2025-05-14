@@ -1,0 +1,5 @@
+
+rul_planner_prompt:
+  class: evals.completion_fns.rul_planner_prompt:RulPlannerPrompt
+  args:
+    model: gpt-4

@@ -1,0 +1,31 @@
+tool_call_eval:
+  prompt: |-
+    You are assessing a submitted tool call response against an ideal tool call response based on a criterion. Here is the data:
+    [BEGIN DATA]
+    ***
+    [Task]: {input}
+    ***
+    [Submission]: {completion}
+    ***
+    [Ideal Response]: {ideal}
+    ***
+    [Criterion]: {criteria}
+    ***
+    [END DATA]
+    
+    Does the submission meet the criterion? First, compare the submission to the ideal response. The tool calls should include all the required tools and their inputs should match the expected values as specified in the criterion.
+    
+    Write out your reasoning step by step to ensure your conclusion is correct. Avoid simply stating the correct answers at the outset. 
+    
+    Then print only the single character "Y" or "N" (without quotes or punctuation) on its own line corresponding to whether the submission meets the criterion.
+    
+    At the end, repeat just the letter again by itself on a new line.
+    
+    Reasoning:
+  eval_type: cot_classify
+  choice_scores:
+    "Y": 1.0
+    "N": 0.0
+  choice_strings: 'YN'
+  input_outputs:
+    input: "completion" 

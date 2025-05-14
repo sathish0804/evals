@@ -1,0 +1,15 @@
+rul_eval:  
+  id: rul_eval.v0
+  metrics: [accuracy]
+
+rul_eval.v0:
+  class: evals.elsuite.modelgraded.classify:ModelBasedClassify
+  args:
+    samples_jsonl: rul_eval/samples.jsonl
+    completion_fns: rul_planner_prompt
+    modelgraded_spec: tool_call_eval
+    modelgraded_spec_args:
+      criteria: >-
+        correctness: Does the model extract the correct facility_id and end_date based on the query? 
+        Are both tool calls generated with proper inputs (getInverterReliabilityData and getFacilityWorkingHours)?
+        The tool_calls array should include both required tools, with client_id (from tenant_id), correct facility_id from the facility_info, and proper event_date (end of month).

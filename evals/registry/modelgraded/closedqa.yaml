@@ -1,0 +1,24 @@
+closedqa:
+  prompt: |-
+    You are assessing a submitted answer on a given task based on a criterion. Here is the data:
+    [BEGIN DATA]
+    ***
+    [Task]: {input}
+    ***
+    [Submission]: {completion}
+    ***
+    [Criterion]: {criteria}
+    ***
+    [END DATA]
+    Does the submission meet the criterion? First, write out in a step by step manner your reasoning about the criterion to be sure that your conclusion is correct. Avoid simply stating the correct answers at the outset. Then print only the single character "Y" or "N" (without quotes or punctuation) on its own line corresponding to the correct answer. At the end, repeat just the letter again by itself on a new line.
+
+    For this evaluation, you are assessing answers to questions about solar and wind energy operational metrics. The answers should be concise (1-2 sentences) and directly address the question with accurate calculations and values. Compare the submission against the ideal answer to determine if it correctly solves the problem.
+
+    Reasoning:
+  eval_type: cot_classify
+  choice_scores:
+    "Y": 1.0
+    "N": 0.0
+  choice_strings: 'YN'
+  input_outputs:
+    input: "completion"

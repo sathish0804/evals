@@ -1,0 +1,12 @@
+qna_solver_prompt:  
+  id: qna_solver_prompt.dev.v0
+  metrics: [accuracy]
+
+qna_solver_prompt.dev.v0:
+  class: evals.elsuite.modelgraded.classify:ModelBasedClassify
+  args:
+    samples_jsonl: qna_solver_prompt/samples.jsonl
+    completion_fns: qna_solver_prompt
+    modelgraded_spec: closedqa
+    modelgraded_spec_args:
+      criteria: "correctness: Is the answer correct?"

@@ -1,0 +1,15 @@
+ner_eval:  
+  id: ner_eval.v0
+  metrics: [accuracy]
+
+ner_eval.v0:
+  class: evals.elsuite.modelgraded.classify:ModelBasedClassify
+  args:
+    samples_jsonl: ner_eval/samples.jsonl
+    completion_fns: ner_prompt
+    modelgraded_spec: closedqa
+    modelgraded_spec_args:
+      criteria: >-
+        correctness: Does the completion extract and format all relevant fields 
+        from the input query (operational metric, facility, timeframe, etc.) 
+        accurately, and handle ambiguities explicitly if present?

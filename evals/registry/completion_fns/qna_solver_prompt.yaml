@@ -1,0 +1,4 @@
+qna_solver_prompt:
+  class: evals.completion_fns.qna_solver_prompt:QnASolverPrompt
+  args:
+    model: gpt-4

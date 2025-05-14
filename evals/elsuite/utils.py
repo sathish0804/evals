@@ -89,14 +89,36 @@ def f1_score(prediction: str, answers: list[str]) -> float:
 
 
 def scrub_formatting_from_prompt(prompt):
+    """
+    Scrub formatting from prompt, handling different types of inputs.
+    
+    Args:
+        prompt: Can be a string, chat prompt (list of dicts), or a dict with string values
+        
+    Returns:
+        The scrubbed prompt with the same structure
+    """
+    if prompt is None:
+        return None
+        
     scrubbed_prompt = copy.copy(prompt)
 
-    if is_chat_prompt(prompt):
+    if isinstance(scrubbed_prompt, dict):
+        # Handle dictionary inputs
+        for key, value in scrubbed_prompt.items():
+            scrubbed_prompt[key] = scrub_formatting_from_prompt(value)
+    elif is_chat_prompt(scrubbed_prompt):
+        # Handle chat prompts (list of dicts)
         for i, msg in enumerate(scrubbed_prompt):
             if "content" in msg:
                 scrubbed_prompt[i]["content"] = msg["content"].replace("{", "{{").replace("}", "}}")
-    else:
+    elif isinstance(scrubbed_prompt, str):
+        # Handle string inputs
         scrubbed_prompt = scrubbed_prompt.replace("{", "{{").replace("}", "}}")
+    elif isinstance(scrubbed_prompt, list):
+        # Handle general lists
+        scrubbed_prompt = [scrub_formatting_from_prompt(item) for item in scrubbed_prompt]
+    
     return scrubbed_prompt
 
 
@@ -169,7 +191,12 @@ class PromptFn:
             k: chat_prompt_to_text_prompt(v, for_completion=False) if is_chat_prompt(v) else v
             for k, v in kwargs.items()
         }
-        if is_chat_prompt(self.prompt):
+        
+        # Handle different prompt types
+        if isinstance(self.prompt, dict):
+            # If prompt is a dictionary, pass it directly
+            prompt = self.prompt
+        elif is_chat_prompt(self.prompt):
             prompt = []
             for msg in self.prompt:
                 formatted_msg = copy.copy(msg)
@@ -180,15 +207,24 @@ class PromptFn:
             # Prompt is a string
             prompt = format_necessary(self.prompt, **kwargs)
 
-        result = self.completion_fn(
-            prompt=prompt,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            top_p=1,
-            frequency_penalty=0,
-            presence_penalty=0,
-            n=(1 if self.n_samples is None else self.n_samples),
-            **self.completion_kwargs,
-        )
+        # Special handling for different completion_fn types
+        completion_fn_class_name = self.completion_fn.__class__.__name__
+        
+        # Call the completion function with appropriate parameters
+        if completion_fn_class_name == 'QnASolverPrompt' or completion_fn_class_name == 'NerPrompt':
+            # Ensure prompt_args is a dictionary for these special completion functions
+            result = self.completion_fn(prompt_args=prompt, **self.completion_kwargs)
+        else:
+            result = self.completion_fn(
+                prompt=prompt,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+                top_p=1,
+                frequency_penalty=0,
+                presence_penalty=0,
+                n=(1 if self.n_samples is None else self.n_samples),
+                **self.completion_kwargs,
+            )
+        
         sampled = result.get_completions()[0]
         return sampled, prompt

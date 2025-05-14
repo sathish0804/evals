@@ -64,6 +64,14 @@ class ModelBasedClassify(evals.Eval):
         for k, v in self.mg.input_outputs.items():
             if v in test_sample:  # test_sample already has completion, skip.
                 continue
+                
+            # Check the completion function type
+            try:
+                completion_fn_cls = self.completion_fn.__class__.__name__
+            except AttributeError:
+                # Handle the case where completion_fn might not be a class instance
+                completion_fn_cls = ""
+                
             if self.multicomp_n > 1:
                 completion = sample_and_concat_n_completions(
                     self.completion_fns,
@@ -73,10 +81,15 @@ class ModelBasedClassify(evals.Eval):
                     n=self.multicomp_n,
                 )
             else:
-                get_input_completion = PromptFn(
-                    test_sample[k], completion_fn=self.completion_fn, **self.sample_kwargs
-                )
-                completion, _ = get_input_completion()
+                # Special handling for QnASolverPrompt and NerPrompt
+                if completion_fn_cls == 'QnASolverPrompt' or completion_fn_cls == 'NerPrompt':
+                    completion = self.completion_fn(prompt_args=test_sample, **self.sample_kwargs).get_completions()[0]
+                else:
+                    get_input_completion = PromptFn(
+                        test_sample[k], completion_fn=self.completion_fn, **self.sample_kwargs
+                    )
+                    completion, _ = get_input_completion()
+                    
             completions[v] = completion
 
         # run modelgraded eval

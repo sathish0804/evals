@@ -64,6 +64,43 @@ def classify(
     # get choice strings
     choice_strings = get_choice_strings(mg.choice_strings, n=n)
 
+    # Check if using NerPrompt as evaluator
+    try:
+        completion_fn_cls = completion_fn.__class__.__name__
+    except AttributeError:
+        completion_fn_cls = ""
+
+    if completion_fn_cls == 'NerPrompt':
+        # For NerPrompt, we'll use a simplified approach
+        # Create a message with the needed fields for evaluation
+        sample = format_kwargs.get('sample', {})
+        ideal = format_kwargs.get('ideal', {})
+        completion = format_kwargs.get('completion', "")
+        
+        # Create a simple evaluation prompt
+        eval_prompt = [
+            {"role": "user", "content": f"Question: {sample.get('input', '')}\n\nIdeal response: {ideal}\n\nActual response: {completion}\n\nEvaluate if the actual response matches the ideal response structure for NER extraction. Only answer with 'correct' or 'incorrect'."}
+        ]
+        
+        # Call the completion function directly
+        result = completion_fn(prompt_args=eval_prompt, **completion_kwargs)
+        evaluation = result.get_completions()[0]
+        
+        # Determine the choice based on the evaluation
+        if "correct" in evaluation.lower():
+            choice = choice_strings[0]  # Assuming first choice is positive
+        else:
+            choice = choice_strings[-1]  # Assuming last choice is negative
+            
+        score = get_choice_score(choice, choice_strings, mg.choice_scores)
+        return choice, dict(
+            score=score,
+            sampled=[evaluation],
+            prompt=eval_prompt,
+            invalid_choice=False,
+        )
+    
+    # Normal flow for other evaluator types
     # append answer prompt
     prompt = mg.prompt
     if isinstance(prompt, str):
