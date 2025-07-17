@@ -3,6 +3,6 @@ supervisory_planner_prompt:
   metrics: [accuracy]
  
 supervisory_planner_prompt.dev.v0:
-  class: evals.elsuite.basic.fuzzy_match:FuzzyMatch
+  class: evals.elsuite.basic.match:Match
   args:
     samples_jsonl: supervisory_agent/samples.jsonl
